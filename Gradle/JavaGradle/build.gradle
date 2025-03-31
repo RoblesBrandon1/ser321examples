@@ -51,6 +51,20 @@ task runFraction(type: JavaExec) {
   main = 'Fraction'
 }
 
+task runFrac(type: JavaExec) {
+  group 'Fraction Tasks'
+  description 'Runs Fraction with optional arguments'
+
+  classpath = sourceSets.main.runtimeClasspath
+
+  main = 'Fraction'
+
+  def num = project.hasProperty('num') ? project.getProperty('num') : '1'
+  def denom = project.hasProperty('denom') ? project.getProperty('denom') : '1'
+
+  args num, denom
+}
+
 // Try:
 // 1. Change Fraction.main so it accepts 2 arguments
 // 2. Create a new gradle tasks that accepts two arguments and 

@@ -199,20 +199,27 @@ class WebServer {
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           // extract path parameters
-          query_pairs = splitQuery(request.replace("multiply?", ""));
+          try {
+            query_pairs = splitQuery(request.replace("multiply?", ""));
 
-          // extract required fields from parameters
-          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+            if (!query_pairs.containsKey("num1") || !query_pairs.containsKey("num2")) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("Missing required parameters 'num1' and/or 'num2'.");
+            } else {
+              Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+              Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+              Integer result = num1 * num2;
 
-          // do math
-          Integer result = num1 * num2;
-
-          // Generate response
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Result is: " + result);
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("Result is: " + result);
+            }
+          } catch (Exception e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("Invalid input. Please provide two integers: num1 and num2.");
+          }
 
           // TODO: Include error handling here with a correct error code and
           // a response that makes sense
@@ -227,18 +234,126 @@ class WebServer {
           //     "/repos/OWNERNAME/REPONAME/contributors"
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
+          try {
+            query_pairs = splitQuery(request.replace("github?", ""));
 
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
+            if (!query_pairs.containsKey("query")) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("Missing required parameter 'query'.");
+            } else {
+              String apiQuery = query_pairs.get("query");
+              String json = fetchURL("https://api.github.com/" + apiQuery);
+
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("<html><body><h2>GitHub Repository Info</h2><ul>");
+
+              String[] items = json.split("\\},\\{");
+
+              for (String item : items) {
+                String fullName = "N/A";
+                String id = "N/A";
+                String login = "N/A";
+
+                if (item.contains("\"full_name\":\"")) {
+                  fullName = item.split("\"full_name\":\"")[1].split("\"")[0];
+                }
+
+                if (item.contains("\"id\":")) {
+                  id = item.split("\"id\":")[1].split(",")[0];
+                }
+
+                if (item.contains("\"login\":\"")) {
+                  login = item.split("\"login\":\"")[1].split("\"")[0];
+                }
+
+                builder.append("<li>").append(fullName)
+                        .append(" — ID: ").append(id)
+                        .append(", Owner: ").append(login).append("</li>");
+              }
+
+              builder.append("</ul></body></html>");
+            }
+          } catch (Exception e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("Failed to fetch or parse GitHub data: ").append(e.getMessage());
+          }
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
 
-        } else {
+        }else if (request.contains("weather?")) {
+          Map<String, String> query_pairs = new LinkedHashMap<>();
+          try {
+            query_pairs = splitQuery(request.replace("weather?", ""));
+
+            if (!query_pairs.containsKey("city") || !query_pairs.containsKey("unit")) {
+              builder.append("HTTP/1.1 400 Bad Request\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("Missing required parameters 'city' and/or 'unit'.");
+            } else {
+              String city = query_pairs.get("city");
+              String unit = query_pairs.get("unit").toLowerCase();
+
+              int temp = (int) (Math.random() * 30 + 50); // random base temp
+              String result = unit.equals("c") ? (temp - 32) * 5 / 9 + "°C" : temp + "°F";
+
+              builder.append("HTTP/1.1 200 OK\n");
+              builder.append("Content-Type: text/html; charset=utf-8\n\n");
+              builder.append("The weather in ").append(city).append(" is approximately: ").append(result);
+            }
+          } catch (Exception e) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("Invalid input. Please provide 'city' and 'unit' (c or f).");
+          }
+        }else if (request.contains("greet?")) {
+        Map<String, String> query_pairs = new LinkedHashMap<>();
+        try {
+          query_pairs = splitQuery(request.replace("greet?", ""));
+
+          if (!query_pairs.containsKey("name") || !query_pairs.containsKey("lang")) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append("Missing required parameters 'name' and/or 'lang'.");
+          } else {
+            String name = query_pairs.get("name");
+            String lang = query_pairs.get("lang");
+
+            String greeting;
+            switch (lang.toLowerCase()) {
+              case "en":
+                greeting = "Hello";
+                break;
+              case "es":
+                greeting = "Hola";
+                break;
+              case "fr":
+                greeting = "Bonjour";
+                break;
+              case "de":
+                greeting = "Hallo";
+                break;
+              case "it":
+                greeting = "Ciao";
+                break;
+              default:
+                greeting = "Hello";
+                break;
+            }
+
+            builder.append("HTTP/1.1 200 OK\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n\n");
+            builder.append(greeting).append(" ").append(name).append("!");
+          }
+        } catch (Exception e) {
+          builder.append("HTTP/1.1 400 Bad Request\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n\n");
+          builder.append("Invalid input. Please provide 'name' and 'lang'.");
+        }
+      }
+        else {
           // if the request is not recognized at all
 
           builder.append("HTTP/1.1 400 Bad Request\n");
